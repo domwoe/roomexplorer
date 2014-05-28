@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <link rel="stylesheet" href="css/metro-bootstrap.css">
+        <script src="js/jquery/jquery.min.js"></script>
+        <script src="js/jquery/jquery.widget.min.js"></script>
+        <script src="js/metro.min.js"></script>
+        <script src="http://code.highcharts.com/stock/highstock.js"></script>
+        <script src="js/graph.js"></script>
+        <style>
+            hr {color:sienna;}
+            p {margin-left:20px;}
+            .rectangles 
+            {
+                display:inline-block; 
+                overflow:auto;
+                background-color: rgba(0,0,0,0.4);
+            }
+        </style>
+    </head>
+    <body class="metro">
+        <nav class="navigation-bar dark">
+            <nav class="navigation-bar-content">
+                <item class="element">Room Explorer</item>
+                <item class="element-divider"></item>
+                <div class="element">
+                    <a class="dropdown-toggle" href="#">User</a>
+                    <ul class="dropdown-menu" data-role="dropdown" id="user_dropdown"></ul>
+                </div>
+            </nav>
+        </nav>
+        <div class="grid">
+            <div class="row">
+                <div class="span11 offset1" id="base_container" ></div>
+            </div>
+            <div class="row">
+                <div class="span11 offset1" id="graph_container"></div>
+            </div>    
+        </div>
+    </body>
+    <script>
+    function getData(endpoint, callback) {
+        //console.log("Inside getData");
+        $.getJSON("http://213.165.92.187:8080/api/"+endpoint+"?callback=?", function(result) {
+            callback(result);
+        })
+    }    
+    function utime_to_datetime(utime) {
+        var t = new Date(parseInt(utime));
+        //var t = new Date();
+        //t.setSeconds(utime);
+        return t.format("dd/mm hh:MM:ss");
+    }
+    function check_if_old(time,delta) {
+        var now = Date.now();
+        //console.log(now - time);    
+        if (now - time >= delta*60*1000) {
+            return true
+        }
+        else return false
+    }
+    
+    function mark_old(isold) {
+        if (isold) {
+            return "style=\"background-color:rgba(255,0,0,0.4);\""
+        }
+        else {
+            return ""
+        }
+    }
+
+    
+    function load_rooms(userId) {
+        $("#base_container").empty();
+        getData("user/"+userId+"/room", function(rooms) {
+            console.log("load_rooms("+userId+") called");
+            $.each(rooms, function(index, room) {
+                getData("user/"+userId+"/room/"+room.roomid+"/sensors", function(sensors) {
+                    $("#base_container").append("<div class=\"tile double double-vertical\" id=room"+room.roomid+" style=\"padding:20px\"><div class=\"brand bg-black\"><span class=\"label fg-white\">"+room.name+"</span></div>");
+                    $("#room"+room.roomid).on("click",function() {
+                        graph(userId, room.roomid, room.name);
+                    })
+                    $("#room"+room.roomid).append(
+                        "<table id=table"+room.roomid+" style=\"font-size:12px;background-color:transparent;\">"+
+                            "<thead style=\"font-weight:bold;\">"+
+                                "<tr style=\"border-bottom:solid 2px black\"><th>Name</th><th>Value</th><th>Time</th></tr>"+
+                            "</thead>"+
+                            "<tbody>"+
+                                "<tr></tr>"+
+                            "</tbody>"+
+                        "</table>"
+                    )
+                    $.each(sensors, function(index, sensor) {
+                        //console.log(JSON.stringify(sensor));
+                        if (sensor.displayname) {
+                            $("#table"+room.roomid+" tr:last").after(
+                                "<tr>"+
+                                    "<td>"+sensor.displayname+"</td>"+
+                                    "<td>"+sensor.currentReading+"</td>"+
+                                    "<td "+mark_old(check_if_old(sensor.currentTimestamp,15))+">"+utime_to_datetime(sensor.currentTimestamp)+"</td>"+
+                                "</tr>"
+                            );
+                            if (sensor.displayname == "CO2") {
+                                //console.log(getColor(sensor.currentReading));
+                                $("#room"+room.roomid).css('background-color', getColor(sensor.currentReading));
+                            }
+                            else if (sensor.displayname == "Motion") {
+                                if (!check_if_old(sensor.currentTimestamp,10)) {
+                                    $("#room"+room.roomid).find(".brand").append("<span class=\"badge available\"></span>");    
+                                }
+
+                            }
+                        }    
+
+                        // $("#room"+room.roomid).append(
+                        //     "<div class=\"row\" style=\"font-size:8px;\">"+
+                        //         "<div class=\"span12\">"+sensor.name+"</div>"
+                        // );
+                    })
+                    var rowCount = $("#table"+room.roomid+" tr").length;
+                    //console.log("Room: "+room.roomid+" rows: "+rowCount);
+                    if (rowCount < 3) {
+                        $("#room"+room.roomid).remove();
+                    }
+                })    
+            })         
+        })
+    }
+    
+    $(function() {
+        $(document).ready(function() {
+            load_rooms(1);
+            getData("user", function(users) {
+                //console.log("Inside getData(user)");
+                $.each(users, function(index, user) {
+                    $("#user_dropdown").append("<li><a href=\"#\" onclick=\"load_rooms("+user.userId+")\">"+user.name+"</a></li>");
+                    //console.log("<li><a href=\"#\" onclick=\"load_rooms("+user.userId+")\">"+user.name+"</a></li>");
+                })
+            })
+            
+        })
+    })
+
+    function getColor(value) {
+        var value = 1-(value)/2000;
+        var h = (value) * 0.4; // Hue (note 0.4 = Green, see huge chart below)
+        var s = 0.9; // Saturation
+        var v = 0.9; // Brightness
+
+        return HSVtoRGB(h,s,v);
+    }
+
+    function componentToHex(c) {
+        var hex = c.toString(16);
+        return hex.length == 1 ? "0" + hex : hex;
+    }
+
+    function rgbToHex(r, g, b) {
+        return "#" + componentToHex(r) + componentToHex(g) + componentToHex(b);
+    }
+
+    function HSVtoRGB(h, s, v) {
+        var r, g, b, i, f, p, q, t;
+        if (h && s === undefined && v === undefined) {
+            s = h.s, v = h.v, h = h.h;
+        }
+        i = Math.floor(h * 6);
+        f = h * 6 - i;
+        p = v * (1 - s);
+        q = v * (1 - f * s);
+        t = v * (1 - (1 - f) * s);
+        switch (i % 6) {
+            case 0: r = v, g = t, b = p; break;
+            case 1: r = q, g = v, b = p; break;
+            case 2: r = p, g = v, b = t; break;
+            case 3: r = p, g = q, b = v; break;
+            case 4: r = t, g = p, b = v; break;
+            case 5: r = v, g = p, b = q; break;
+        }
+        return rgbToHex(Math.floor(r * 255),Math.floor(g * 255),Math.floor(b * 255));
+    }  
+    </script>
+</html>
+
+
+
+
+</html>

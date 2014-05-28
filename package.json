@@ -1,0 +1,12 @@
+{
+  "name": "Roomexplorer",
+  "author": "Dominic Wörner <dwoerner@ethz.ch>",
+  "scripts": {
+    "start": "app.js"
+  },
+  "version": "0.0.0",
+  "dependencies": {
+    "express": "latest",
+    "http": "latest"
+  }
+}
