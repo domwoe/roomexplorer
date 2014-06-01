@@ -68,7 +68,7 @@ function graph(user,room,name) {
                 }
                 getMeasurements(user, room, sensor.quantity, 'week', 0, function(data) {
                     if (sensor.unitTypeId == 17) { // online occupancy detection
-                        console.log("add PLotbands")
+                        //console.log("add PLotbands")
                         for (i=0;i<data.length-1;i++) {
                             if (i==0 && data[i].value == 0) {
                                 chart.xAxis[0].addPlotBand({
@@ -81,6 +81,48 @@ function graph(user,room,name) {
                             else if (data[i].value == 1) {
                                 chart.xAxis[0].addPlotBand({
                                     color: '#ffe990',
+                                    from: data[i].timestamp,
+                                    to: data[i+1].timestamp
+                                })  
+                            }
+                        }
+                               
+                    }
+                    else if (sensor.unitTypeId == 13) { // iBeacons
+                        //console.log("add PLotbands")
+                        for (i=0;i<data.length-1;i++) {
+                            if (i==0 && data[i].value == 0) {
+                                chart.xAxis[0].addPlotBand({
+                                    color: 'rgba(46,154,254,0.5)',
+                                    from: chart.xAxis[0].min,
+                                    to: data[i].timestamp
+                                })
+
+                            }
+                            else if (data[i].value == 1) {
+                                chart.xAxis[0].addPlotBand({
+                                    color: 'rgba(46,154,254,0.5)',
+                                    from: data[i].timestamp,
+                                    to: data[i+1].timestamp
+                                })  
+                            }
+                        }
+                               
+                    }
+                    else if (sensor.unitTypeId == 12) { // groundtruth
+                        console.log("groundTruth unittype 12");
+                        for (i=0;i<data.length-1;i++) {
+                            if (i==0 && data[i].value == 0) {
+                                chart.xAxis[0].addPlotBand({
+                                    color: '#00FF00',
+                                    from: chart.xAxis[0].min,
+                                    to: data[i].timestamp
+                                })
+
+                            }
+                            else if (data[i].value == 1) {
+                                chart.xAxis[0].addPlotBand({
+                                    color: '#00FF00',
                                     from: data[i].timestamp,
                                     to: data[i+1].timestamp
                                 })  
