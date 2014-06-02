@@ -108,6 +108,11 @@
                                 if (!check_if_old(sensor.currentTimestamp,10)) {
                                     $("#room"+room.roomid).find(".brand").append("<span class=\"badge available\"></span>");    
                                 }
+                            }    
+                            else if (sensor.displayname == "iBeacon") { // TvB special
+                                if (sensor.currentReading == 1 && !check_if_old(sensor.currentTimestamp,10)) {
+                                    $("#room"+room.roomid).find(".brand").append('<span class="badge"><img src="images/tvb.gif" width="60" height="60" align="right"></span>');    
+                                }    
 
                             }
                         }    
